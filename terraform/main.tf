@@ -51,8 +51,13 @@ data "aws_subnets" "selected" {
 }
 
 resource "aws_key_pair" "this" {
+  count      = try(file(pathexpand(var.public_key_path)), null) != null ? 1 : 0
   key_name   = "${var.name}-key"
-  public_key = file(pathexpand(var.public_key_path))
+  public_key = try(file(pathexpand(var.public_key_path)), "")
+
+  lifecycle {
+    ignore_changes = []
+  }
 }
 
 resource "aws_security_group" "web" {
@@ -97,7 +102,7 @@ resource "aws_security_group" "web" {
 resource "aws_instance" "web" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
-  key_name                    = aws_key_pair.this.key_name
+  key_name                    = try(aws_key_pair.this[0].key_name, null)
   vpc_security_group_ids      = [aws_security_group.web.id]
   subnet_id                   = data.aws_subnets.selected.ids[0]
   associate_public_ip_address = true
