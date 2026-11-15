@@ -1,0 +1,54 @@
+---
+- name: Install and configure nginx
+  hosts: web
+  become: true
+
+  pre_tasks:
+    - name: Wait for SSH to come up on the new instance
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    - name: Wait for cloud-init to finish (avoids apt lock clashes)
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Deploy a simple index page
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        mode: "0644"
+        content: |
+          <!DOCTYPE html>
+          <html>
+            <head><title>nginx on EC2</title></head>
+            <body>
+              <h1>Hello from {{ inventory_hostname }}</h1>
+              <p>Provisioned by Terraform, configured by Ansible.</p>
+            </body>
+          </html>
+      notify: Reload nginx
+
+    - name: Ensure nginx is running and enabled at boot
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  post_tasks:
+    - name: Check nginx responds locally
+      ansible.builtin.uri:
+        url: http://localhost
+        status_code: 200
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
