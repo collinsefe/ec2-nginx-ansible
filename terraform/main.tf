@@ -33,8 +33,21 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-data "aws_vpc" "default" {
-  default = true
+data "aws_vpc" "selected" {
+  id      = var.vpc_id != "" ? var.vpc_id : null
+  default = var.vpc_id == "" ? true : null
+}
+
+data "aws_subnets" "selected" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.selected.id]
+  }
+
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
+  }
 }
 
 resource "aws_key_pair" "this" {
@@ -44,8 +57,8 @@ resource "aws_key_pair" "this" {
 
 resource "aws_security_group" "web" {
   name        = "${var.name}-sg"
-  description = "SSH from admin IP, HTTP from anywhere"
-  vpc_id      = data.aws_vpc.default.id
+  description = "SSH from admin IP, HTTP from anywhere, internal VPC traffic"
+  vpc_id      = data.aws_vpc.selected.id
 
   ingress {
     description = "SSH"
@@ -63,6 +76,14 @@ resource "aws_security_group" "web" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    description = "Internal VPC traffic"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [data.aws_vpc.selected.cidr_block]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -78,6 +99,7 @@ resource "aws_instance" "web" {
   instance_type               = var.instance_type
   key_name                    = aws_key_pair.this.key_name
   vpc_security_group_ids      = [aws_security_group.web.id]
+  subnet_id                   = data.aws_subnets.selected.ids[0]
   associate_public_ip_address = true
 
   metadata_options {

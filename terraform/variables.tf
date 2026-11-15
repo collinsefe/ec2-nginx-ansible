@@ -16,6 +16,12 @@ variable "instance_type" {
   default     = "t3.micro"
 }
 
+variable "vpc_id" {
+  description = "VPC ID to deploy into (leave empty to use default VPC)"
+  type        = string
+  default     = ""
+}
+
 variable "ssh_cidr" {
   description = "CIDR allowed to SSH in, e.g. your public IP as x.x.x.x/32"
   type        = string
