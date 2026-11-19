@@ -1,31 +1,88 @@
 .PHONY: help tf-fmt tf-init tf-validate tf-plan tf-apply tf-destroy \
-	ansible-check local-test clean
+	ansible-check ansible-run local-test clean demo-setup demo-status demo-info demo-destroy
 
 TF_DIR := terraform
 ANSIBLE_DIR := ansible
 SSH_CIDR ?= $(shell curl -s https://checkip.amazonaws.com)/32
 
 help:
-	@echo "ec2-nginx-ansible Makefile targets:"
+	@echo "╔════════════════════════════════════════════════════════════════╗"
+	@echo "║   nginx on EC2 — Terraform + Ansible Demo                     ║"
+	@echo "║   Perfect for learning Infrastructure as Code & Configuration ║"
+	@echo "╚════════════════════════════════════════════════════════════════╝"
 	@echo ""
-	@echo "Terraform targets:"
-	@echo "  make tf-fmt          Format Terraform files"
-	@echo "  make tf-init         Initialize Terraform"
-	@echo "  make tf-validate     Validate Terraform configuration"
-	@echo "  make tf-plan         Plan Terraform deployment (shows changes)"
-	@echo "  make tf-apply        Apply Terraform deployment (CAUTION: creates resources)"
-	@echo "  make tf-destroy      Destroy Terraform resources (CAUTION: deletes resources)"
+	@echo "📋 QUICK START:"
+	@echo "  make demo-setup      Create EC2 + install nginx (full demo)"
+	@echo "  make demo-status     Show deployment details"
+	@echo "  make demo-destroy    Tear down everything"
 	@echo ""
-	@echo "Ansible targets:"
-	@echo "  make ansible-check   Check Ansible playbook syntax"
+	@echo "🏗️  TERRAFORM (Infrastructure)"
+	@echo "  make tf-init         Download AWS provider plugins"
+	@echo "  make tf-validate     Check syntax of Terraform files"
+	@echo "  make tf-plan         Show what will be created (no changes yet)"
+	@echo "  make tf-apply        Create the EC2 instance on AWS"
+	@echo "  make tf-destroy      Delete the EC2 instance (WARNING!)"
 	@echo ""
-	@echo "Combined targets:"
-	@echo "  make local-test      Run all validation tests locally"
-	@echo "  make clean           Remove Terraform state and lock files"
+	@echo "⚙️  ANSIBLE (Configuration)"
+	@echo "  make ansible-check   Validate Ansible playbook syntax"
+	@echo "  make ansible-run     Run the playbook (install nginx)"
 	@echo ""
-	@echo "Usage:"
-	@echo "  make tf-plan SSH_CIDR=YOUR_IP/32"
-	@echo "  make local-test"
+	@echo "✅ TESTING & VALIDATION"
+	@echo "  make local-test      Validate all code locally (no AWS)"
+	@echo "  make demo-info       Show current deployment info"
+	@echo ""
+	@echo "🧹 CLEANUP"
+	@echo "  make clean           Remove state files & temporary files"
+	@echo ""
+	@echo "📌 CUSTOM SSH CIDR:"
+	@echo "  make tf-plan SSH_CIDR=203.0.113.0/32"
+
+demo-setup: tf-apply ansible-run demo-info
+	@echo ""
+	@echo "✨ Demo is ready!"
+	@echo ""
+	@echo "Your nginx instance is running. Access it here:"
+	@echo "  🌐 http://$$(terraform -chdir=$(TF_DIR) output -raw public_ip)"
+	@echo ""
+	@echo "Or via DNS:"
+	@echo "  🌐 $$(terraform -chdir=$(TF_DIR) output -raw url)"
+
+demo-status:
+	@echo "📊 Current Deployment Status:"
+	@echo ""
+	@if [ -f $(TF_DIR)/terraform.tfstate ]; then \
+		echo "✅ Instance deployed"; \
+		terraform -chdir=$(TF_DIR) output; \
+	else \
+		echo "❌ No instance deployed (run 'make demo-setup')"; \
+	fi
+
+demo-info:
+	@echo "📋 Deployment Information:"
+	@echo ""
+	@if [ -f $(TF_DIR)/terraform.tfstate ]; then \
+		echo "Instance ID: $$(terraform -chdir=$(TF_DIR) output -raw instance_id)"; \
+		echo "Public IP:   $$(terraform -chdir=$(TF_DIR) output -raw public_ip)"; \
+		echo "Private IP:  $$(terraform -chdir=$(TF_DIR) output -raw private_ip)"; \
+		echo "Region:      $$(terraform -chdir=$(TF_DIR) output -raw vpc_id | head -c 10)..."; \
+		echo ""; \
+		echo "Access nginx at:"; \
+		echo "  curl $$(terraform -chdir=$(TF_DIR) output -raw url)"; \
+		echo "  ssh ubuntu@$$(terraform -chdir=$(TF_DIR) output -raw public_ip)"; \
+	else \
+		echo "No instance found. Run 'make demo-setup' first."; \
+	fi
+
+demo-destroy: clean
+	@echo "⚠️  WARNING: This will DESTROY AWS resources!"
+	@echo ""
+	@read -p "Are you absolutely sure? Type 'destroy-demo' to confirm: " confirm; \
+	if [ "$$confirm" = "destroy-demo" ]; then \
+		terraform -chdir=$(TF_DIR) destroy -var="ssh_cidr=0.0.0.0/32"; \
+		echo "✅ Destroyed!"; \
+	else \
+		echo "❌ Cancelled"; \
+	fi
 
 tf-fmt:
 	@echo "🔍 Formatting Terraform files..."
@@ -70,17 +127,30 @@ ansible-check:
 	@echo "🔍 Checking Ansible playbook syntax..."
 	cd $(ANSIBLE_DIR) && ansible-playbook --syntax-check -i "localhost," playbook.yml
 
+ansible-run:
+	@echo "⚙️  Running Ansible playbook to configure nginx..."
+	@if [ ! -f $(ANSIBLE_DIR)/inventory.ini ]; then \
+		echo "❌ Error: inventory.ini not found!"; \
+		echo "Run 'make tf-apply' first to create the EC2 instance."; \
+		exit 1; \
+	fi
+	cd $(ANSIBLE_DIR) && ansible-playbook -i inventory.ini playbook.yml
+	@echo ""
+	@echo "✅ nginx is now installed and running!"
+
 local-test: tf-fmt tf-validate ansible-check
 	@echo ""
-	@echo "======================================"
-	@echo "✅ All local tests passed!"
-	@echo "======================================"
+	@echo "╔════════════════════════════════════════════╗"
+	@echo "║   ✅ All local tests PASSED!              ║"
+	@echo "║   Code is ready for deployment             ║"
+	@echo "╚════════════════════════════════════════════╝"
 	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Review the plan: make tf-plan SSH_CIDR=YOUR_IP/32"
-	@echo "  2. Deploy: make tf-apply SSH_CIDR=YOUR_IP/32"
-	@echo "  3. Configure: cd ansible && ansible-playbook playbook.yml"
-	@echo "  4. Test: curl \$$(terraform -chdir=terraform output -raw url)"
+	@echo "📋 Next steps:"
+	@echo "  1️⃣  Review changes:  make tf-plan SSH_CIDR=YOUR_IP/32"
+	@echo "  2️⃣  Deploy:          make tf-apply SSH_CIDR=YOUR_IP/32"
+	@echo "  3️⃣  Or full setup:   make demo-setup"
+	@echo ""
+	@echo "💡 Pro tip: Run 'make help' to see all available commands"
 
 clean:
 	@echo "🧹 Cleaning Terraform files..."
