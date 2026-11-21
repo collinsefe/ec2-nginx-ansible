@@ -106,3 +106,4 @@
       #   - Reloads nginx configuration without dropping connections
       #   - Only runs if notified AND the index page actually changed
       #   - Prevents unnecessary service interruptions
+

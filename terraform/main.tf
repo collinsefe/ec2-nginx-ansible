@@ -54,9 +54,7 @@ data "aws_ami" "ubuntu" {
 
 # Look up the VPC (Virtual Private Cloud) where the instance will be deployed
 data "aws_vpc" "selected" {
-  id      = var.vpc_id != "" ? var.vpc_id : null
-  default = var.vpc_id == "" ? true : null # Use default VPC if none specified
-  # VPC = your private network in AWS where instances can communicate securely
+  id = var.vpc_id
 }
 
 # Look up public subnets in the selected VPC
@@ -82,7 +80,6 @@ data "aws_subnets" "selected" {
 resource "aws_key_pair" "this" {
   key_name   = "${var.name}-key"         # Name to identify this key in AWS
   public_key = file(var.public_key_path) # Read your public key from ~/.ssh/id_ed25519.pub
-  # Key pairs = how you authenticate to EC2 instances over SSH (no passwords!)
 }
 
 # Create a Security Group (virtual firewall)

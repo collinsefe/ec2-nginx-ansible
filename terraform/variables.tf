@@ -34,9 +34,6 @@ variable "vpc_id" {
   description = "VPC ID to deploy into. Leave empty to use the default VPC"
   type        = string
   default     = ""
-  # VPC = Virtual Private Cloud (your private network in AWS)
-  # Default VPC = AWS automatically created one for your account
-  # For production, create custom VPCs with specific CIDR ranges
 }
 
 variable "ssh_cidr" {
