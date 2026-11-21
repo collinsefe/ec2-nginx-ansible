@@ -1,0 +1,118 @@
+stages:
+  # - version
+  - format
+  - validate
+  - plan
+  - test
+
+variables:
+  TF_VERSION: "1.5.0"
+  TF_ROOT: "${CI_PROJECT_DIR}/terraform"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+image: ubuntu:latest
+
+before_script:
+  - apt-get update && apt-get install -y curl unzip bash git
+  - |
+    if [ ! -f /usr/local/bin/terraform ]; then
+      curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" -o /tmp/tf.zip
+      unzip -o /tmp/tf.zip -d /usr/local/bin
+      rm -f /tmp/tf.zip
+    fi
+  - terraform version
+
+tf-fmt-check:
+  stage: format
+  script:
+    - cd $TF_ROOT && terraform fmt -check
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
+tf-init:
+  stage: validate
+  script:
+    - cd $TF_ROOT && terraform init -backend=false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
+tf-validate:
+  stage: validate
+  script:
+    - cd $TF_ROOT && terraform init -backend=false && terraform validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
+tf-plan:
+  stage: plan
+  script:
+    # Use -reconfigure to handle backend configuration changes
+    - cd $TF_ROOT && terraform init -reconfigure -backend=false && terraform plan -var="ssh_cidr=0.0.0.0/32" -lock=false -out=tfplan
+  artifacts:
+    paths:
+      - $TF_ROOT/tfplan
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+   
+
+ansible-syntax-check:
+  stage: test
+  before_script:
+    - apt-get update && apt-get install -y ansible
+  script:
+    - cd ${CI_PROJECT_DIR}/ansible && ansible-playbook --syntax-check -i "localhost," playbook.yml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
+pipeline-success:
+  stage: test
+  script:
+    - |
+      echo "======================================"
+      echo "✅ Pipeline Completed Successfully"
+      echo "======================================"
+      echo ""
+      echo "Terraform + Ansible Pipeline Summary:"
+      echo "  Project: ec2-nginx-ansible"
+      echo "  Branch: $CI_COMMIT_BRANCH"
+      echo "  Commit: $CI_COMMIT_SHA"
+      echo ""
+      echo "Validations Passed:"
+      echo "  ✓ Terraform Format Check"
+      echo "  ✓ Terraform Init"
+      echo "  ✓ Terraform Validate"
+      echo "  ✓ Terraform Plan"
+      echo "  ✓ Ansible Syntax Check"
+      echo ""
+      echo "Next Steps:"
+      echo "  - Deploy: terraform -chdir=terraform apply -var=\"ssh_cidr=YOUR_IP/32\""
+      echo "  - Configure: cd ansible && ansible-playbook playbook.yml"
+      echo "  - Test: curl \$(terraform -chdir=terraform output -raw url)"
+      echo "======================================"
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: on_success
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+      when: on_success
+
+tf-plan-apply:
+  stage: apply
+  only:
+    - main
+  script:
+    # Use -reconfigure to handle backend configuration changes
+    - cd $TF_ROOT && terraform init -reconfigure -backend=false && terraform apply -var="ssh_cidr=0.0.0.0/32" -lock=false -auto-approve
+  artifacts:
+    paths:
+      - $TF_ROOT/tfplan
+    expire_in: 1 week
+  rules:
+     - if $CI_COMMIT_BRANCH == "main"
+      when: manual

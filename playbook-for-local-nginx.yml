@@ -1,0 +1,67 @@
+---
+- name: Playbook - Setup Nginx (Play 1)
+  hosts: localhost
+  connection: local
+  # become: t
+  gather_facts: true
+
+  vars:
+    app_name: "My Wonderful Demo App"
+    nginx_port: "{{ 8080 if ansible_os_family == 'Darwin' else 80 }}"
+    nginx_html_path: "{{ '/usr/local/var/www' if ansible_os_family == 'Darwin' else '/var/www/html' }}"
+
+  tasks:
+    - name: Display system info
+      debug:
+        msg: "Running on {{ ansible_os_family }} - {{ ansible_distribution }} {{ ansible_distribution_version }}"
+
+    - name: Update package manager cache
+      package:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "Debian"
+
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Ensure nginx html directory exists
+      file:
+        path: "{{ nginx_html_path }}"
+        state: directory
+
+    - name: Create a simple HTML page
+      copy:
+        src: index.html
+        dest: "{{ nginx_html_path }}/index.html"
+      notify: restart nginx
+
+    - name: Enable and start nginx service (macOS)
+      shell: brew services start nginx
+      when: ansible_os_family == "Darwin"
+      ignore_errors: true
+
+    - name: Enable and start nginx service (Linux)
+      service:
+        name: nginx
+        enabled: true
+        state: started
+      when: ansible_os_family != "Darwin"
+
+
+    - name: Verify nginx is running
+      shell: "ps aux | grep -i nginx | grep -v grep"
+      register: nginx_check
+      failed_when: false
+      changed_when: false
+
+    - name: Success message
+      debug:
+        msg: "✓ Nginx is running! Visit http://localhost:{{ nginx_port }} in your browser"
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted

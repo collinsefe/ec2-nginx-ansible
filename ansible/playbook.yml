@@ -1,54 +1,100 @@
 ---
+# ============================================================================
+# ANSIBLE PLAYBOOK: Install and Configure nginx on Ubuntu EC2 Instance
+# ============================================================================
+# This playbook demonstrates:
+# - Connecting to a newly launched EC2 instance
+# - Installing packages with apt
+# - Deploying configuration files
+# - Managing services
+# - Using variables and templates
+# - Service handlers for idempotency
+#
+# Key Concepts:
+# 1. HOSTS: Target where tasks run (defined in inventory.ini by Terraform)
+# 2. BECOME: Run tasks as root (sudo equivalent)
+# 3. HANDLERS: Run only when notified AND tasks have changed
+# ============================================================================
+
 - name: Install and configure nginx
   hosts: web
-  become: true
+  become: true  # Execute all tasks with sudo privileges
 
+  # ===========================================================================
+  # PRE_TASKS: Setup phase - run before main tasks
+  # ===========================================================================
+  # These tasks ensure the instance is ready and won't interrupt other processes
   pre_tasks:
     - name: Wait for SSH to come up on the new instance
       ansible.builtin.wait_for_connection:
-        timeout: 300
+        timeout: 300  # Give the instance 5 minutes to become reachable
+      # Why: The EC2 instance needs a few seconds to boot and SSH to be ready.
+      # This prevents connection errors if Ansible runs too quickly.
 
     - name: Wait for cloud-init to finish (avoids apt lock clashes)
       ansible.builtin.command: cloud-init status --wait
-      changed_when: false
+      changed_when: false  # This task doesn't "change" anything on the system
+      # Why: cloud-init runs on first boot and locks the apt package manager.
+      # We wait for it to finish to avoid "apt is currently locked" errors.
 
+  # ===========================================================================
+  # TASKS: Main configuration phase
+  # ===========================================================================
   tasks:
     - name: Install nginx
       ansible.builtin.apt:
         name: nginx
-        state: present
-        update_cache: true
-        cache_valid_time: 3600
+        state: present  # Ensure the package is installed
+        update_cache: true  # Update apt cache (like apt update)
+        cache_valid_time: 3600  # Only update cache if it's older than 1 hour
+      # What this does:
+      #   - Installs the nginx package from Ubuntu repositories
+      #   - Updates the package list first
+      #   - Is idempotent: running it twice won't reinstall nginx
 
     - name: Deploy a simple index page
       ansible.builtin.copy:
+        src: index.html
         dest: /var/www/html/index.html
-        mode: "0644"
-        content: |
-          <!DOCTYPE html>
-          <html>
-            <head><title>nginx on EC2</title></head>
-            <body>
-              <h1>Hello from {{ inventory_hostname }}</h1>
-              <p>Provisioned by Terraform, configured by Ansible.</p>
-            </body>
-          </html>
-      notify: Reload nginx
+        mode: "0644"  # File permissions (readable by all)
+      notify: Reload nginx  # Trigger the handler below when this file changes
+      # What this does:
+      #   - Copies index.html from ansible directory to web directory
+      #   - Only reloads nginx if the content actually changed
 
     - name: Ensure nginx is running and enabled at boot
       ansible.builtin.service:
         name: nginx
-        state: started
-        enabled: true
+        state: started  # Start the service if not running
+        enabled: true  # Enable startup on boot
+      # What this does:
+      #   - Starts nginx immediately
+      #   - Configures it to auto-start after system reboot
+      #   - Is idempotent: safe to run multiple times
 
+  # ===========================================================================
+  # POST_TASKS: Validation phase - run after main tasks
+  # ===========================================================================
+  # These tasks verify that everything is working correctly
   post_tasks:
     - name: Check nginx responds locally
       ansible.builtin.uri:
         url: http://localhost
         status_code: 200
+      # Why: Verifies that nginx is actually running and responding to requests
+      # This catches configuration errors (e.g., syntax errors in nginx config)
 
+  # ===========================================================================
+  # HANDLERS: Run only when triggered by other tasks AND something changed
+  # ===========================================================================
+  # Handlers are called by tasks using 'notify:' and only run if the task changed
   handlers:
     - name: Reload nginx
       ansible.builtin.service:
         name: nginx
         state: reloaded
+      # What this does:
+      #   - Reloads nginx configuration without dropping connections
+      #   - Only runs if notified AND the index page actually changed
+      #   - Prevents unnecessary service interruptions
+
