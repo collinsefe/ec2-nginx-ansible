@@ -1,5 +1,6 @@
 stages:
-  - validate
+  - terraform validate
+  - ansible-check
   - test 
 
 variables:
@@ -29,7 +30,7 @@ before_script:
 # ============================================================================
 
 tf-fmt:
-  stage: validate
+  stage: terraform-validate
   script:
     - make tf-fmt
   rules:
@@ -37,7 +38,7 @@ tf-fmt:
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
 tf-validate:
-  stage: validate
+  stage: terraform-validate
   script:
     - make tf-validate
   rules:
@@ -45,7 +46,7 @@ tf-validate:
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
 ansible-check:
-  stage: validate
+  stage: terraform-validate
   script:
     - make ansible-check
   rules:
@@ -57,7 +58,7 @@ ansible-check:
 # ============================================================================
 
 local-test:
-  stage: test
+  stage: ansible-check
   script:
     - make local-test
   rules:
