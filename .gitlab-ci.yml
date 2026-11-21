@@ -1,4 +1,6 @@
 stages:
+  - version
+  - format
   - validate
   - plan
   - test
@@ -22,7 +24,7 @@ before_script:
   - terraform version
 
 tf-version:
-  stage: validate
+  stage: version
   script:
     - terraform version
   rules:
@@ -30,7 +32,7 @@ tf-version:
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
 tf-fmt-check:
-  stage: validate
+  stage: format
   script:
     - cd $TF_ROOT && terraform fmt -check
   rules:
