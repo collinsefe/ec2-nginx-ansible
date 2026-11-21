@@ -1,33 +1,23 @@
 # ============================================================================
 # VARIABLES: Configurable inputs to the Terraform configuration
 # ============================================================================
-# Variables let you customize deployments without editing code.
-# They can be provided via:
-#  - Command line: -var="region=eu-west-1"
-#  - Environment: TF_VAR_region=eu-west-1
-#  - .tfvars files: terraform.tfvars (not in git!)
-#  - Or use the defaults shown here
 
 variable "region" {
   description = "AWS region where the instance will be deployed"
   type        = string
-  default     = "eu-west-2" # London region
-  # Regions: eu-west-1 (Ireland), us-east-1 (Virginia), ap-southeast-1 (Singapore)
-}
+  default     = "eu-west-2" 
+  }
 
 variable "name" {
   description = "Name prefix for all resources (used in tags and resource names)"
   type        = string
-  default     = "nginx-demo"
-  # This becomes: nginx-demo-sg, nginx-demo-key, etc.
+  default     = "nginx-demo-ansible-server"
 }
 
 variable "instance_type" {
   description = "EC2 instance type (computing power + memory)"
   type        = string
-  default     = "t3.micro" # Free tier eligible (1 vCPU, 1 GB RAM)
-  # Other options: t3.small (1 vCPU, 2 GB), t3.medium (2 vCPU, 4 GB), etc.
-  # See: https://aws.amazon.com/ec2/instance-types/t3/
+  default     = "t3.micro" 
 }
 
 variable "vpc_id" {
@@ -39,10 +29,7 @@ variable "vpc_id" {
 variable "ssh_cidr" {
   description = "CIDR block allowed to SSH in (your public IP as x.x.x.x/32)"
   type        = string
-  # This is REQUIRED - you must provide it when running terraform apply
-  # Example: "203.0.113.42/32" = only allow this one IP
-  # /32 = single IP address (not a range)
-  # Security: Never use "0.0.0.0/0" for SSH! That's the entire internet!
+
 }
 
 variable "public_key_path" {

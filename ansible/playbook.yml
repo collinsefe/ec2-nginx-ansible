@@ -27,7 +27,7 @@
   pre_tasks:
     - name: Wait for SSH to come up on the new instance
       ansible.builtin.wait_for_connection:
-        timeout: 300  # Give the instance 5 minutes to become reachable
+        timeout: 420  # Give the instance 5 minutes to become reachable
       # Why: The EC2 instance needs a few seconds to boot and SSH to be ready.
       # This prevents connection errors if Ansible runs too quickly.
 
