@@ -67,19 +67,6 @@ tf-plan:
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
-
-tf-plan-apply:
-  stage: plan
-  script:
-    # Use -reconfigure to handle backend configuration changes
-    - cd $TF_ROOT && terraform init -reconfigure -backend=false && terraform apply -var="ssh_cidr=0.0.0.0/32" -lock=false -auto-approve
-  artifacts:
-    paths:
-      - $TF_ROOT/tfplan
-    expire_in: 1 week
-  rules:
-     - if $CI_COMMIT_BRANCH == "main"
-      when: manual
    
 
 ansible-syntax-check:
@@ -122,3 +109,18 @@ pipeline-success:
       when: on_success
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
       when: on_success
+
+tf-plan-apply:
+  stage: apply
+  only:
+    - main
+  script:
+    # Use -reconfigure to handle backend configuration changes
+    - cd $TF_ROOT && terraform init -reconfigure -backend=false && terraform apply -var="ssh_cidr=0.0.0.0/32" -lock=false -auto-approve
+  artifacts:
+    paths:
+      - $TF_ROOT/tfplan
+    expire_in: 1 week
+  rules:
+     - if $CI_COMMIT_BRANCH == "main"
+      when: manual
