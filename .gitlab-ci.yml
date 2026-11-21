@@ -1,5 +1,5 @@
 stages:
-  - version
+  # - version
   - format
   - validate
   - plan
@@ -22,14 +22,6 @@ before_script:
       rm -f /tmp/tf.zip
     fi
   - terraform version
-
-tf-version:
-  stage: version
-  script:
-    - terraform version
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
 tf-fmt-check:
   stage: format
