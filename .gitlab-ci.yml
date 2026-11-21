@@ -1,6 +1,5 @@
 stages:
   - validate
-  - plan
   - test 
 
 variables:
@@ -26,27 +25,13 @@ before_script:
   - terraform version
 
 # ============================================================================
-# FORMAT STAGE: Check code formatting
+# VALIDATE STAGE: Format and validate all code
 # ============================================================================
 
-tf-fmt-check:
+tf-fmt:
   stage: validate
   script:
     - make tf-fmt
-    - cd $TF_ROOT && terraform fmt -check
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH =~ /^feature\//
-  allow_failure: false
-
-# ============================================================================
-# VALIDATE STAGE: Validate all code (Terraform + Ansible)
-# ============================================================================
-
-tf-init:
-  stage: validate
-  script:
-    - make tf-init
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
@@ -59,29 +44,10 @@ tf-validate:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
-ansible-syntax-check:
+ansible-check:
   stage: validate
   script:
     - make ansible-check
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH =~ /^feature\//
-
-# ============================================================================
-# PLAN STAGE: Show Terraform plan
-# ============================================================================
-
-tf-plan:
-  stage: plan
-  script:
-    - echo "Terraform Plan Stage"
-    - echo "Note: Full plan requires AWS credentials and S3 backend access."
-    - echo "In CI, we validate the configuration syntax only."
-    - echo "For actual deployment plan, run locally: make tf-plan"
-    - cd $TF_ROOT && terraform init -backend=false -reconfigure
-    - cd $TF_ROOT && terraform validate
-    - echo "Terraform configuration syntax is valid"
-    - echo "Ready for local deployment: make demo-setup"
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
@@ -112,9 +78,9 @@ pipeline-success:
     - echo "Branch: $CI_COMMIT_BRANCH"
     - echo ""
     - echo "Validations Passed:"
-    - echo "- Terraform Format Check"
-    - echo "- Terraform Validate"
-    - echo "- Ansible Syntax Check"
+    - echo "- Terraform Format Check (make tf-fmt)"
+    - echo "- Terraform Validate (make tf-validate)"
+    - echo "- Ansible Syntax Check (make ansible-check)"
     - echo ""
     - echo "Next Steps:"
     - echo "Local: make demo-setup"
