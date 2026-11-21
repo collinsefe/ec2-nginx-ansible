@@ -54,7 +54,8 @@ data "aws_ami" "ubuntu" {
 
 # Look up the VPC (Virtual Private Cloud) where the instance will be deployed
 data "aws_vpc" "selected" {
-  id = var.vpc_id
+  id      = var.vpc_id != "" ? var.vpc_id : null
+  default = var.vpc_id == "" ? true : null
 }
 
 # Look up public subnets in the selected VPC

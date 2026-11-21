@@ -1,0 +1,152 @@
+---
+- name: Beginner Ansible Demo - EC2 Setup
+  hosts: ec2_instances
+  become: true
+  gather_facts: true
+
+  vars:
+    app_name: "My EC2 Demo App"
+    app_port: 80
+    deploy_user: "ec2-user"
+
+  tasks:
+    - name: Display EC2 instance information
+      debug:
+        msg: |
+          Instance: {{ inventory_hostname }}
+          OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          Kernel: {{ ansible_kernel }}
+
+    - name: Update all packages
+      yum:
+        name: "*"
+        state: latest
+      when: ansible_os_family == "RedHat"
+
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Create application directory
+      file:
+        path: /var/www/{{ app_name | lower }}
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: '0755'
+
+    - name: Deploy HTML application
+      copy:
+        content: |
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>{{ app_name }}</title>
+              <style>
+                  * { margin: 0; padding: 0; }
+                  body {
+                      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                  }
+                  .container {
+                      background: white;
+                      padding: 40px;
+                      border-radius: 10px;
+                      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+                      text-align: center;
+                      max-width: 600px;
+                  }
+                  h1 { color: #333; margin-bottom: 20px; }
+                  .info-box {
+                      background: #f5f5f5;
+                      padding: 15px;
+                      margin: 15px 0;
+                      border-radius: 5px;
+                      text-align: left;
+                  }
+                  .label { font-weight: bold; color: #667eea; }
+                  .value { color: #333; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 {{ app_name }}</h1>
+                  <p>Deployed successfully with Ansible!</p>
+
+                  <div class="info-box">
+                      <p><span class="label">Hostname:</span> <span class="value">{{ ansible_hostname }}</span></p>
+                      <p><span class="label">Distribution:</span> <span class="value">{{ ansible_distribution }}</span></p>
+                      <p><span class="label">Deployed at:</span> <span class="value">{{ ansible_date_time.iso8601 }}</span></p>
+                  </div>
+
+                  <p style="color: #999; font-size: 12px; margin-top: 30px;">
+                      Powered by Ansible • Running on EC2
+                  </p>
+              </div>
+          </body>
+          </html>
+        dest: /var/www/{{ app_name | lower }}/index.html
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: '0644'
+
+    - name: Configure nginx
+      template:
+        dest: /etc/nginx/conf.d/{{ app_name | lower }}.conf
+        content: |
+          server {
+              listen {{ app_port }};
+              server_name _;
+
+              root /var/www/{{ app_name | lower }};
+              index index.html;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+          }
+      notify: restart nginx
+
+    - name: Enable nginx service
+      service:
+        name: nginx
+        enabled: true
+        state: started
+
+    - name: Verify nginx is responding
+      uri:
+        url: "http://localhost:{{ app_port }}"
+        status_code: 200
+      register: nginx_response
+      retries: 3
+      delay: 2
+
+    - name: Display deployment success
+      debug:
+        msg: |
+          ✓ Deployment successful!
+
+          Access your app at:
+          http://{{ inventory_hostname }}:{{ app_port }}
+
+          Instance details:
+          - Hostname: {{ ansible_hostname }}
+          - OS: {{ ansible_distribution }} {{ ansible_distribution_version }}
+          - Nginx status: Running
+          - Port: {{ app_port }}
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+  post_tasks:
+    - name: Show summary
+      debug:
+        msg: "Deployment complete! Check the app at http://{{ inventory_hostname }}"
