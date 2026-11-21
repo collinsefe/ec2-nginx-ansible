@@ -54,12 +54,12 @@
 
     - name: Deploy a simple index page
       ansible.builtin.copy:
-        src: ../index.html
+        src: index.html
         dest: /var/www/html/index.html
         mode: "0644"  # File permissions (readable by all)
       notify: Reload nginx  # Trigger the handler below when this file changes
       # What this does:
-      #   - Copies index.html from project root to web directory
+      #   - Copies index.html from ansible directory to web directory
       #   - Only reloads nginx if the content actually changed
 
     - name: Ensure nginx is running and enabled at boot
