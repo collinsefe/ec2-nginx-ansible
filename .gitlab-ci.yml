@@ -58,7 +58,9 @@ tf-validate:
 tf-plan:
   stage: plan
   script:
-    - cd $TF_ROOT && terraform init -backend=false && terraform plan -var="ssh_cidr=0.0.0.0/32" -lock=false -out=tfplan
+    # Use -reconfigure to handle backend configuration changes
+    - cd $TF_ROOT && terraform init -reconfigure -backend=false
+    - cd $TF_ROOT && terraform plan -var="ssh_cidr=0.0.0.0/32" -lock=false -out=tfplan
   artifacts:
     paths:
       - $TF_ROOT/tfplan
