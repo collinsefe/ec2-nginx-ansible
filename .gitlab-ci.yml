@@ -1,5 +1,4 @@
 stages:
-  - format
   - validate
   - plan
   - test
@@ -32,7 +31,7 @@ before_script:
 # ============================================================================
 
 tf-fmt-check:
-  stage: format
+  stage: validate
   script:
     - make tf-fmt
     - cd $TF_ROOT && terraform fmt -check
@@ -81,7 +80,6 @@ tf-plan:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
     - if: $CI_COMMIT_BRANCH == "main"
-      when: always
 
 # ============================================================================
 # TEST STAGE: Run all tests and show summary
@@ -143,4 +141,3 @@ tf-apply:
     - if: $CI_COMMIT_BRANCH == "main"
   when: manual
 
-# thanks
