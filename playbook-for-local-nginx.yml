@@ -33,26 +33,7 @@
 
     - name: Create a simple HTML page
       copy:
-        content: |
-          <!DOCTYPE html>
-          <html>
-          <head>
-              <title>{{ app_name }}</title>
-              <style>
-                  body { font-family: Arial, sans-serif; margin: 50px; }
-                  .container { text-align: center; }
-                  h1 { color: #333; }
-              </style>
-          </head>
-          <body>
-              <div class="container">
-                  <h1>{{ app_name }}</h1>
-                  <p>Welcome to Mupando Platform Team Ansible Demo!</p>
-                  <p>Hostname: {{ ansible_hostname }}</p>
-                  <p>OS: {{ ansible_distribution }}</p>
-              </div>
-          </body>
-          </html>
+        src: index.html
         dest: "{{ nginx_html_path }}/index.html"
       notify: restart nginx
 
