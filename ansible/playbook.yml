@@ -54,21 +54,12 @@
 
     - name: Deploy a simple index page
       ansible.builtin.copy:
+        src: ../index.html
         dest: /var/www/html/index.html
         mode: "0644"  # File permissions (readable by all)
-        content: |
-          <!DOCTYPE html>
-          <html>
-            <head><title>nginx on EC2</title></head>
-            <body>
-              <h1>Hello from {{ inventory_hostname }}</h1>
-              <p>Provisioned by Terraform, configured by Ansible.</p>
-            </body>
-          </html>
       notify: Reload nginx  # Trigger the handler below when this file changes
       # What this does:
-      #   - Creates a custom HTML homepage
-      #   - Uses {{ inventory_hostname }} to show the actual server name
+      #   - Copies index.html from project root to web directory
       #   - Only reloads nginx if the content actually changed
 
     - name: Ensure nginx is running and enabled at boot
