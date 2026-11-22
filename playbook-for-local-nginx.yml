@@ -1,5 +1,19 @@
 ---
-- name: Playbook - Setup Nginx (Play 1)
+- name: Play1 - List system information 
+  hosts: localhost
+  connection: local
+  # become: t
+  gather_facts: true
+
+  tasks:
+    - name: Display file system information
+      shell: "df -h"
+    
+    - name: Display CPU information
+      shell: "echo $PWD && echo 'Files in current directory:' && ls -la "
+
+
+- name: Play2 - Setup Nginx 
   hosts: localhost
   connection: local
   # become: t
@@ -33,7 +47,7 @@
 
     - name: Create a simple HTML page
       copy:
-        src: index.html
+        src: ./index.html
         dest: "{{ nginx_html_path }}/index.html"
       notify: restart nginx
 
