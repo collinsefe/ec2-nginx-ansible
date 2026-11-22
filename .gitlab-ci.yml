@@ -15,15 +15,6 @@ before_script:
   - apt-get update
   - apt-get install -y curl unzip bash git make ansible
 
-  # Install Terraform if not already installed
-  - |
-    if [ ! -f /usr/local/bin/terraform ]; then
-      curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" -o /tmp/tf.zip
-      unzip -o /tmp/tf.zip -d /usr/local/bin
-      rm -f /tmp/tf.zip
-    fi
-  - terraform version
-
 # ============================================================================
 # VALIDATE STAGE: Format and validate all code
 # ============================================================================
@@ -37,7 +28,7 @@ tf-fmt:
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
 
 tf-validate:
-  stage: validate
+  stage: test
   script:
     - make tf-validate
   rules:
