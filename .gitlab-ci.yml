@@ -24,3 +24,23 @@ before_script:
     fi
   - terraform version
 
+# ============================================================================
+# VALIDATE STAGE: Format and validate all code
+# ============================================================================
+
+tf-fmt:
+  stage: validate
+  script:
+    - make tf-fmt
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
+tf-validate:
+  stage: validate
+  script:
+    - make tf-validate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+
