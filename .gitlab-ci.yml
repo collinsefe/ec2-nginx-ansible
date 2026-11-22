@@ -24,8 +24,8 @@ before_script:
     fi
   - terraform version
 
-  # Initialize terraform without backend for CI validation
-  - cd $TF_ROOT && terraform init -backend=false -reconfigure || true
+  # Initialize terraform without backend for CI validation (from project root)
+  - terraform -chdir=$TF_ROOT init -backend=false -reconfigure || true
 
 # ============================================================================
 # VALIDATE STAGE: Format and validate all code
