@@ -13,7 +13,7 @@ image: ubuntu:latest
 before_script:
   # Install required tools
   - apt-get update
-  - apt-get install -y curl unzip bash git make ansible
+  - apt-get install -y curl unzip bash git make
 
   # Install Terraform if not already installed
   - |
@@ -49,6 +49,8 @@ tf-validate:
 
 ansible-check:
   stage: validate
+  before_script:
+    - apt-get update && apt-get install -y ansible
   script:
     - make ansible-check
   rules:
